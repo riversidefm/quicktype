@@ -37,9 +37,9 @@
     "graphql": "^0.11.7",
     "lodash": "^4.17.21",
     "moment": "^2.30.1",
-    "quicktype-core": "*",
-    "quicktype-graphql-input": "*",
-    "quicktype-typescript-input": "*",
+    "@riversidefm/quicktype-core": "*",
+    "@riversidefm/quicktype-graphql-input": "*",
+    "@riversidefm/quicktype-typescript-input": "*",
     "readable-stream": "^4.5.2",
     "stream-json": "1.8.0",
     "string-to-stream": "^3.0.1",
@@ -74,6 +74,9 @@
       "node-fetch": {
         "whatwg-url": "^13.0.0"
       }
+    },
+    "@mark.probst/typescript-json-schema": {
+      "typescript": "~5.8.3"
     }
   },
   "files": [

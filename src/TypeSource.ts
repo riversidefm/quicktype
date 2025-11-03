@@ -1,7 +1,7 @@
 import type { Readable } from "readable-stream";
 
-import type { JSONSchemaSourceData, JSONSourceData } from "quicktype-core";
-import type { GraphQLSourceData } from "quicktype-graphql-input";
+import type { JSONSchemaSourceData, JSONSourceData } from "@riversidefm/quicktype-core";
+import type { GraphQLSourceData } from "@riversidefm/quicktype-graphql-input";
 
 export interface JSONTypeSource extends JSONSourceData<Readable> {
     kind: "json";
