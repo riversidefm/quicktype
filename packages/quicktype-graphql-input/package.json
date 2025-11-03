@@ -11,7 +11,7 @@
         "build": "tsc"
     },
     "dependencies": {
-        "quicktype-core": "file:../quicktype-core",
+        "quicktype-core": "*",
         "collection-utils": "^1.0.1",
         "graphql": "^0.11.7"
     },
