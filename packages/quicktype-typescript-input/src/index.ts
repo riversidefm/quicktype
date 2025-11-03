@@ -6,7 +6,7 @@ import {
     type JSONSchemaSourceData,
     defined,
     messageError,
-} from "quicktype-core";
+} from "@riversidefm/quicktype-core";
 import * as ts from "typescript";
 
 const settings: PartialArgs = {

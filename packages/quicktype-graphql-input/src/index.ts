@@ -27,7 +27,7 @@ import {
     namesTypeAttributeKind,
     panic,
     removeNullFromUnion,
-} from "quicktype-core";
+} from "@riversidefm/quicktype-core";
 
 import { type GraphQLSchema, TypeKind } from "./GraphQLSchema";
 
