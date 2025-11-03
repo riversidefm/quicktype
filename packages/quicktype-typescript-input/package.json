@@ -1,6 +1,6 @@
 {
     "name": "@riversidefm/quicktype-typescript-input",
-    "version": "18.0.15-riverside.0",
+    "version": "18.0.15-riverside.1",
     "description": "Package for using TypeScript as an input language to quicktype",
     "license": "Apache-2.0",
     "main": "dist/index.js",
@@ -18,5 +18,7 @@
     "devDependencies": {
         "@types/node": "~22.14.0"
     },
-    "files": ["dist"]
+    "files": [
+        "dist"
+    ]
 }

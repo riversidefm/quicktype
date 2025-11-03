@@ -1,6 +1,6 @@
 {
     "name": "@riversidefm/quicktype-core",
-    "version": "18.0.15-riverside.0",
+    "version": "18.0.15-riverside.1",
     "description": "The quicktype engine as a library",
     "license": "Apache-2.0",
     "main": "dist/index.js",
@@ -46,7 +46,9 @@
             }
         }
     },
-    "files": ["dist"],
+    "files": [
+        "dist"
+    ],
     "browser": {
         "fs": false
     }
