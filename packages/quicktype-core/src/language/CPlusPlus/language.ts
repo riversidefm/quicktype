@@ -110,6 +110,20 @@ export const cPlusPlusOptions = {
         "Hide null value for optional field",
         false,
     ),
+    typeOverridesFile: new StringOption(
+        "type-overrides",
+        "JSON file containing type override rules (array of {pattern, substitution, header})",
+        "FILE",
+        "",
+        "secondary",
+    ),
+    jsonType: new StringOption(
+        "json-type",
+        "Custom type to use instead of nlohmann::json",
+        "TYPE",
+        "nlohmann::json",
+        "secondary",
+    ),
 };
 
 export const cPlusPlusLanguageConfig = {

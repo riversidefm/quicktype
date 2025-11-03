@@ -1,0 +1,18 @@
+[
+    {
+        "pattern": "Timestamp$",
+        "substitution": "std::chrono::system_clock::time_point",
+        "header": "chrono"
+    },
+    {
+        "pattern": "Duration$",
+        "substitution": "std::chrono::nanoseconds",
+        "header": "chrono"
+    },
+    {
+        "pattern": "CustomUUID$",
+        "substitution": "boost::uuids::uuid",
+        "header": "boost/uuid/uuid.hpp"
+    }
+]
+

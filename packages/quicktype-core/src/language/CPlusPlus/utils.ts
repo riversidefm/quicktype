@@ -220,3 +220,58 @@ export class BaseString {
         return this._toString.wrap([], inner);
     }
 }
+
+/**
+ * Type override rule for substituting JSON schema types with custom C++ types
+ */
+export interface TypeOverrideRule {
+    /** Regex pattern to match against type names */
+    pattern: string;
+    /** C++ type to substitute */
+    substitution: string;
+    /** Header file to include for this type */
+    header: string;
+}
+
+/**
+ * Loads and parses type override rules from a JSON file
+ */
+export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
+    if (!filePath) {
+        return [];
+    }
+
+    try {
+        const fs = require("fs");
+        const content = fs.readFileSync(filePath, "utf-8");
+        const rules = JSON.parse(content) as TypeOverrideRule[];
+
+        // Validate the structure
+        if (!Array.isArray(rules)) {
+            throw new Error("Type overrides file must contain an array of rules");
+        }
+
+        for (const rule of rules) {
+            if (!rule.pattern || !rule.substitution || !rule.header) {
+                throw new Error("Each type override rule must have pattern, substitution, and header fields");
+            }
+        }
+
+        return rules;
+    } catch (error) {
+        throw new Error(`Failed to load type overrides from ${filePath}: ${error}`);
+    }
+}
+
+/**
+ * Finds a matching type override rule for a given type name
+ */
+export function findTypeOverride(typeName: string, rules: TypeOverrideRule[]): TypeOverrideRule | undefined {
+    for (const rule of rules) {
+        const regex = new RegExp(rule.pattern);
+        if (regex.test(typeName)) {
+            return rule;
+        }
+    }
+    return undefined;
+}

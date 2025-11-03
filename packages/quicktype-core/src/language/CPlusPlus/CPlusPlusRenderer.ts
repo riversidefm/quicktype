@@ -72,10 +72,13 @@ import {
     type StringType,
     type TypeContext,
     type TypeRecord,
+    type TypeOverrideRule,
     WrappingCode,
     addQualifier,
     constraintsForType,
+    findTypeOverride,
     legalizeName,
+    loadTypeOverrides,
     optionalAsSharedType,
     optionalFactoryAsSharedType,
 } from "./utils";
@@ -128,12 +131,23 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
     protected readonly enumeratorNamingStyle: NamingStyle;
 
+    private readonly _typeOverrides: TypeOverrideRule[];
+
+    private readonly _usedStlHeaders: Set<string>;
+
+    private readonly _customTypeHeaders: Set<string>;
+
     public constructor(
         targetLanguage: TargetLanguage,
         renderContext: RenderContext,
         private readonly _options: OptionValues<typeof cPlusPlusOptions>,
     ) {
         super(targetLanguage, renderContext);
+
+        // Load type overrides from file if specified
+        this._typeOverrides = loadTypeOverrides(_options.typeOverridesFile);
+        this._usedStlHeaders = new Set<string>();
+        this._customTypeHeaders = new Set<string>();
 
         this._enumType = _options.enumType;
         this._namespaceNames = _options.namespace.split("::");
@@ -379,6 +393,39 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         }
     }
 
+    /**
+     * Check if a type name should be substituted with a custom type
+     */
+    protected getTypeSubstitution(typeName: string): TypeOverrideRule | undefined {
+        return findTypeOverride(typeName, this._typeOverrides);
+    }
+
+    /**
+     * Check if a named type should be substituted
+     */
+    protected isSubstitutedType(t: Type): TypeOverrideRule | undefined {
+        if (!isNamedType(t) || this._typeOverrides.length === 0) {
+            return undefined;
+        }
+        try {
+            const typeName = this.nameForNamedType(t);
+            if (typeName === undefined) {
+                return undefined;
+            }
+            return this.getTypeSubstitution(this.sourcelikeToString(typeName));
+        } catch {
+            // Some types may not have names yet during generation
+            return undefined;
+        }
+    }
+
+    /**
+     * Track usage of an STL header
+     */
+    protected trackStlHeader(header: string): void {
+        this._usedStlHeaders.add(header);
+    }
+
     protected forbiddenNamesForGlobalNamespace(): string[] {
         return [...keywords, ...this._forbiddenGlobalNames];
     }
@@ -541,12 +588,25 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         this.emitLine("#pragma once");
         this.ensureBlankLine();
 
-        if (this.haveOptionalProperties) {
+        // Emit STL headers only if they're actually used
+        if (this._usedStlHeaders.has("optional") || this.haveOptionalProperties) {
             if (this._options.boost) {
                 this.emitInclude(true, "boost/optional.hpp");
             } else {
                 this.emitInclude(true, "optional");
             }
+        }
+
+        if (this._usedStlHeaders.has("vector")) {
+            this.emitInclude(true, "vector");
+        }
+
+        if (this._usedStlHeaders.has("map")) {
+            this.emitInclude(true, "map");
+        }
+
+        if (this._usedStlHeaders.has("string")) {
+            this.emitInclude(true, "string");
         }
 
         if (this.haveNamedUnions) {
@@ -566,6 +626,17 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
             if (includeHelper && !this._options.typeSourceStyle) {
                 this.emitInclude(false, "helper.hpp");
+            }
+        }
+
+        // Emit custom type headers
+        if (this._customTypeHeaders.size > 0) {
+            this.ensureBlankLine();
+            for (const header of this._customTypeHeaders) {
+                // System headers are boost headers or headers without path separators (STL)
+                const isSystemHeader = header.startsWith("boost/") ||
+                    (!header.includes("/") && !header.includes("\\"));
+                this.emitInclude(isSystemHeader, header);
             }
         }
 
@@ -705,7 +776,17 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     protected jsonQualifier(inJsonNamespace: boolean): Sourcelike {
-        return inJsonNamespace ? [] : "nlohmann::";
+        if (inJsonNamespace) return [];
+
+        // Use custom json type if specified, otherwise default to nlohmann::json
+        const jsonType = this._options.jsonType;
+        if (jsonType !== "nlohmann::json") {
+            // Custom type specified - return it without qualifier
+            // The full type is in jsonType, so we'll return empty here and use jsonType directly
+            return [];
+        }
+
+        return "nlohmann::";
     }
 
     protected variantIndirection(
@@ -725,6 +806,14 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         isOptional: boolean,
     ): Sourcelike {
         const inJsonNamespace = ctx.inJsonNamespace;
+
+        // Check if this is a substituted type
+        const substitution = this.isSubstitutedType(t);
+        if (substitution !== undefined) {
+            this._customTypeHeaders.add(substitution.header);
+            return substitution.substitution;
+        }
+
         if (isOptional && t instanceof UnionType) {
             // avoid have optionalType<optionalType<Type>>
             for (const tChild of t.getChildren()) {
@@ -739,6 +828,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             t,
             (_anyType) => {
                 isOptional = false;
+                const jsonType = this._options.jsonType;
+                if (jsonType !== "nlohmann::json") {
+                    return maybeAnnotated(withIssues, anyTypeIssueAnnotation, jsonType);
+                }
                 return maybeAnnotated(withIssues, anyTypeIssueAnnotation, [
                     this.jsonQualifier(inJsonNamespace),
                     "json",
@@ -746,6 +839,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             },
             (_nullType) => {
                 isOptional = false;
+                const jsonType = this._options.jsonType;
+                if (jsonType !== "nlohmann::json") {
+                    return maybeAnnotated(withIssues, nullTypeIssueAnnotation, jsonType);
+                }
                 return maybeAnnotated(withIssues, nullTypeIssueAnnotation, [
                     this.jsonQualifier(inJsonNamespace),
                     "json",
@@ -755,27 +852,31 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             (_integerType) => "int64_t",
             (_doubleType) => "double",
             (_stringType) => {
+                this.trackStlHeader("string");
                 if (forceNarrowString) {
                     return "std::string";
                 }
 
                 return this._stringType.getType();
             },
-            (arrayType) => [
-                "std::vector<",
-                this.cppType(
-                    arrayType.items,
-                    {
-                        needsForwardIndirection: false,
-                        needsOptionalIndirection: true,
-                        inJsonNamespace,
-                    },
-                    withIssues,
-                    forceNarrowString,
-                    false,
-                ),
-                ">",
-            ],
+            (arrayType) => {
+                this.trackStlHeader("vector");
+                return [
+                    "std::vector<",
+                    this.cppType(
+                        arrayType.items,
+                        {
+                            needsForwardIndirection: false,
+                            needsOptionalIndirection: true,
+                            inJsonNamespace,
+                        },
+                        withIssues,
+                        forceNarrowString,
+                        false,
+                    ),
+                    ">",
+                ];
+            },
             (classType) =>
                 this.variantIndirection(
                     classType,
@@ -788,6 +889,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     ],
                 ),
             (mapType) => {
+                this.trackStlHeader("map");
                 let keyType = this._stringType.getType();
                 if (forceNarrowString) {
                     keyType = "std::string";
@@ -811,10 +913,17 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     ">",
                 ];
             },
-            (enumType) => [
-                this.ourQualifier(inJsonNamespace),
-                this.nameForNamedType(enumType),
-            ],
+            (enumType) => {
+                const sub = this.isSubstitutedType(enumType);
+                if (sub !== undefined) {
+                    this._customTypeHeaders.add(sub.header);
+                    return sub.substitution;
+                }
+                return [
+                    this.ourQualifier(inJsonNamespace),
+                    this.nameForNamedType(enumType),
+                ];
+            },
             (unionType) => {
                 const nullable = nullableFromUnion(unionType);
                 if (nullable !== null) {
@@ -832,6 +941,11 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     );
                 }
 
+                const sub = this.isSubstitutedType(unionType);
+                if (sub !== undefined) {
+                    this._customTypeHeaders.add(sub.header);
+                    return sub.substitution;
+                }
                 return [
                     this.ourQualifier(inJsonNamespace),
                     this.nameForNamedType(unionType),
@@ -839,6 +953,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             },
         );
         if (!isOptional) return typeSource;
+        this.trackStlHeader("optional");
         return [this.optionalType(t), "<", typeSource, ">"];
     }
 
@@ -2767,8 +2882,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         this.emitInclude(true, "sstream");
         this.ensureBlankLine();
         this.emitNamespaces(this._namespaceNames, () => {
-            this.emitLine("using nlohmann::json;");
-            this.ensureBlankLine();
+            if (!this._options.justTypes) {
+                this.emitLine("using nlohmann::json;");
+                this.ensureBlankLine();
+            }
             this.emitHelperFunctions();
         });
 
@@ -3096,6 +3213,12 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         d: ClassType | EnumType | UnionType,
         defName: Name,
     ): void {
+        // Skip generating file for substituted types
+        const substitution = this.isSubstitutedType(d);
+        if (substitution !== undefined) {
+            return;
+        }
+
         const name = `${this.sourcelikeToString(defName)}.hpp`;
         this.startFile(name, true);
         this._generatedFiles.add(name);
@@ -3105,8 +3228,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         this.emitNamespaces(this._namespaceNames, () => {
             this.emitDescription(this.descriptionForType(d));
             this.ensureBlankLine();
-            this.emitLine("using nlohmann::json;");
-            this.ensureBlankLine();
+            if (!this._options.justTypes) {
+                this.emitLine("using nlohmann::json;");
+                this.ensureBlankLine();
+            }
             if (d instanceof ClassType) {
                 this.emitClass(d, defName);
             } else if (d instanceof EnumType) {

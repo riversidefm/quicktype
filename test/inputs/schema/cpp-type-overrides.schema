@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TypeOverridesTest",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "timestamp": {
+      "$ref": "#/definitions/Timestamp"
+    },
+    "duration": {
+      "$ref": "#/definitions/Duration"
+    },
+    "uuid": {
+      "$ref": "#/definitions/CustomUUID"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "optionalValue": {
+      "type": "integer"
+    }
+  },
+  "required": ["id", "timestamp"],
+  "definitions": {
+    "Timestamp": {
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "type": "integer"
+        },
+        "nanos": {
+          "type": "integer"
+        }
+      },
+      "required": ["seconds", "nanos"]
+    },
+    "Duration": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": ["value"]
+    },
+    "CustomUUID": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": ["value"]
+    }
+  }
+}
