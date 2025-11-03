@@ -20,20 +20,37 @@ echo "Building quicktype..."
 npm run build
 
 VERSION=$(jq -r '.version' package.json)
-echo "Publishing @riversidefm/quicktype@$VERSION to GitHub Packages..."
+echo "Publishing @riversidefm/quicktype workspace packages version $VERSION to GitHub Packages..."
 
+# Publish workspace packages
+PACKAGES=("quicktype-core" "quicktype-graphql-input" "quicktype-typescript-input")
+for pkg in "${PACKAGES[@]}"; do
+    echo ""
+    echo "Publishing @riversidefm/$pkg..."
+    pushd packages/$pkg
+    if [ "$DRY_RUN" = true ]; then
+        npm publish --dry-run
+    else
+        npm publish
+    fi
+    popd
+done
+
+# Publish main quicktype package
+echo ""
+echo "Publishing @riversidefm/quicktype@$VERSION..."
 if [ "$DRY_RUN" = true ]; then
-    echo "[DRY RUN] - No actual publishing will occur"
     npm publish --dry-run
 else
-    echo "Publishing to GitHub Packages..."
     npm publish
 fi
 
 if [ "$DRY_RUN" = true ]; then
+    echo ""
     echo "[DRY RUN] Completed - no actual publishing occurred"
 else
-    echo "Successfully published to GitHub Packages!"
+    echo ""
+    echo "Successfully published all packages to GitHub Packages!"
     echo "Install with: npm install @riversidefm/quicktype@$VERSION"
 fi
 
