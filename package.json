@@ -4,7 +4,10 @@
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "repository": "https://github.com/riversidefm/quicktype",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/riversidefm/quicktype.git"
+  },
   "engines": {
     "node": ">=18.12.0"
   },
@@ -76,5 +79,7 @@
   "files": [
     "dist"
   ],
-  "bin": "dist/index.js"
+  "bin": {
+    "quicktype": "dist/index.js"
+  }
 }
