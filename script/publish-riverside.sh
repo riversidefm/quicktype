@@ -19,11 +19,6 @@ fi
 echo "Building quicktype..."
 npm run build
 
-# Update package name to include @riversidefm scope
-echo "Updating package.json for riverside publishing..."
-jq '.name = "@riversidefm/quicktype"' package.json > package.json.tmp
-mv package.json.tmp package.json
-
 VERSION=$(jq -r '.version' package.json)
 echo "Publishing @riversidefm/quicktype@$VERSION to GitHub Packages..."
 
@@ -34,11 +29,6 @@ else
     echo "Publishing to GitHub Packages..."
     npm publish
 fi
-
-# Revert package name
-echo "Reverting package.json..."
-jq '.name = "quicktype"' package.json > package.json.tmp
-mv package.json.tmp package.json
 
 if [ "$DRY_RUN" = true ]; then
     echo "[DRY RUN] Completed - no actual publishing occurred"
