@@ -442,11 +442,6 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             const rule = this.getTypeSubstitution(this.sourcelikeToString(typeName));
             // Only return if it's an enhancement rule (has baseClass)
             if (rule?.baseClass) {
-                // Check conditional injection
-                if (rule.onlyWithSerialization && !this._options.justTypes) {
-                    // Skip injection when serialization is enabled (not --just-types)
-                    return undefined;
-                }
                 // Track the base class header
                 if (rule.baseClassHeader) {
                     this._baseClassHeaders.add(rule.baseClassHeader);

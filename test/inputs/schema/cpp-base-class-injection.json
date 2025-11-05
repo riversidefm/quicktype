@@ -6,8 +6,7 @@
         "injectPublic": [
             "std::string toJsonString() const override;",
             "void fromJsonString(const std::string& json) override;"
-        ],
-        "onlyWithSerialization": true
+        ]
     },
     {
         "pattern": "CutEntry$",
@@ -16,8 +15,7 @@
         "injectPublic": [
             "std::string toJsonString() const override;",
             "void fromJsonString(const std::string& json) override;"
-        ],
-        "onlyWithSerialization": true
+        ]
     },
     {
         "pattern": "Timestamp$",

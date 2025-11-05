@@ -245,9 +245,6 @@ export interface TypeOverrideRule {
     injectProtected?: string[];
     /** Private method declarations to inject */
     injectPrivate?: string[];
-
-    /** Only inject when serialization is enabled (not --just-types) */
-    onlyWithSerialization?: boolean;
 }
 
 /**
