@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TimelineEntries",
+  "type": "object",
+  "properties": {
+    "patches": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/PatchEntry"
+      }
+    },
+    "cuts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CutEntry"
+      }
+    }
+  },
+  "required": ["patches", "cuts"],
+  "definitions": {
+    "PatchEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "timestamp", "data"]
+    },
+    "CutEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "startTime": {
+          "$ref": "#/definitions/Timestamp"
+        },
+        "endTime": {
+          "$ref": "#/definitions/Timestamp"
+        }
+      },
+      "required": ["id", "startTime", "endTime"]
+    },
+    "Timestamp": {
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "type": "integer"
+        },
+        "nanos": {
+          "type": "integer"
+        }
+      },
+      "required": ["seconds", "nanos"]
+    }
+  }
+}

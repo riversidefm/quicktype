@@ -137,6 +137,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
     private readonly _customTypeHeaders: Set<string>;
 
+    private readonly _baseClassHeaders: Set<string>;
+
     public constructor(
         targetLanguage: TargetLanguage,
         renderContext: RenderContext,
@@ -148,6 +150,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         this._typeOverrides = loadTypeOverrides(_options.typeOverridesFile);
         this._usedStlHeaders = new Set<string>();
         this._customTypeHeaders = new Set<string>();
+        this._baseClassHeaders = new Set<string>();
 
         this._enumType = _options.enumType;
         this._namespaceNames = _options.namespace.split("::");
@@ -412,7 +415,45 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             if (typeName === undefined) {
                 return undefined;
             }
-            return this.getTypeSubstitution(this.sourcelikeToString(typeName));
+            const rule = this.getTypeSubstitution(this.sourcelikeToString(typeName));
+            // Only return if it's a substitution rule (not an enhancement rule)
+            if (rule?.substitution) {
+                return rule;
+            }
+            return undefined;
+        } catch {
+            // Some types may not have names yet during generation
+            return undefined;
+        }
+    }
+
+    /**
+     * Get enhancement rule (base class + method injection) for a type
+     */
+    protected getEnhancementRule(t: Type): TypeOverrideRule | undefined {
+        if (!isNamedType(t) || this._typeOverrides.length === 0) {
+            return undefined;
+        }
+        try {
+            const typeName = this.nameForNamedType(t);
+            if (typeName === undefined) {
+                return undefined;
+            }
+            const rule = this.getTypeSubstitution(this.sourcelikeToString(typeName));
+            // Only return if it's an enhancement rule (has baseClass)
+            if (rule?.baseClass) {
+                // Check conditional injection
+                if (rule.onlyWithSerialization && !this._options.justTypes) {
+                    // Skip injection when serialization is enabled (not --just-types)
+                    return undefined;
+                }
+                // Track the base class header
+                if (rule.baseClassHeader) {
+                    this._baseClassHeaders.add(rule.baseClassHeader);
+                }
+                return rule;
+            }
+            return undefined;
         } catch {
             // Some types may not have names yet during generation
             return undefined;
@@ -640,6 +681,17 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             }
         }
 
+        // Emit base class headers
+        if (this._baseClassHeaders.size > 0) {
+            this.ensureBlankLine();
+            for (const header of this._baseClassHeaders) {
+                // System headers are boost headers or headers without path separators (STL)
+                const isSystemHeader = header.startsWith("boost/") ||
+                    (!header.includes("/") && !header.includes("\\"));
+                this.emitInclude(isSystemHeader, header);
+            }
+        }
+
         this.ensureBlankLine();
     }
 
@@ -810,8 +862,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         // Check if this is a substituted type
         const substitution = this.isSubstitutedType(t);
         if (substitution !== undefined) {
-            this._customTypeHeaders.add(substitution.header);
-            return substitution.substitution;
+            // isSubstitutedType only returns rules with substitution and header
+            this._customTypeHeaders.add(substitution.header!);
+            return substitution.substitution!;
         }
 
         if (isOptional && t instanceof UnionType) {
@@ -916,8 +969,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             (enumType) => {
                 const sub = this.isSubstitutedType(enumType);
                 if (sub !== undefined) {
-                    this._customTypeHeaders.add(sub.header);
-                    return sub.substitution;
+                    this._customTypeHeaders.add(sub.header!);
+                    return sub.substitution!;
                 }
                 return [
                     this.ourQualifier(inJsonNamespace),
@@ -943,8 +996,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
                 const sub = this.isSubstitutedType(unionType);
                 if (sub !== undefined) {
-                    this._customTypeHeaders.add(sub.header);
-                    return sub.substitution;
+                    this._customTypeHeaders.add(sub.header!);
+                    return sub.substitution!;
                 }
                 return [
                     this.ourQualifier(inJsonNamespace),
@@ -1273,8 +1326,21 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
     protected emitClass(c: ClassType, className: Name): void {
         this.emitDescription(this.descriptionForType(c));
+
+        // Check for enhancement rule (base class + method injection)
+        const enhancementRule = this.getEnhancementRule(c);
+
+        // Emit class/struct declaration with optional inheritance
+        const classDeclaration: Sourcelike[] = [
+            this._options.codeFormat ? "class " : "struct ",
+            className
+        ];
+        if (enhancementRule?.baseClass) {
+            classDeclaration.push(" : public ", enhancementRule.baseClass);
+        }
+
         this.emitBlock(
-            [this._options.codeFormat ? "class " : "struct ", className],
+            classDeclaration,
             true,
             () => {
                 const constraints = this.generateClassConstraints(c);
@@ -1305,6 +1371,43 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 }
 
                 this.emitClassMembers(c, constraints);
+
+                // Inject methods if enhancement rule is present
+                if (enhancementRule) {
+                    // Inject public methods
+                    if (enhancementRule.injectPublic && enhancementRule.injectPublic.length > 0) {
+                        this.ensureBlankLine();
+                        if (!this._options.codeFormat) {
+                            this.emitLine("// Injected public methods");
+                        } else {
+                            this.emitLine("public:");
+                            this.emitLine("// Injected methods");
+                        }
+                        for (const method of enhancementRule.injectPublic) {
+                            this.emitLine(method);
+                        }
+                    }
+
+                    // Inject protected methods
+                    if (enhancementRule.injectProtected && enhancementRule.injectProtected.length > 0) {
+                        this.ensureBlankLine();
+                        this.emitLine("protected:");
+                        this.emitLine("// Injected protected methods");
+                        for (const method of enhancementRule.injectProtected) {
+                            this.emitLine(method);
+                        }
+                    }
+
+                    // Inject private methods
+                    if (enhancementRule.injectPrivate && enhancementRule.injectPrivate.length > 0) {
+                        this.ensureBlankLine();
+                        this.emitLine("private:");
+                        this.emitLine("// Injected private methods");
+                        for (const method of enhancementRule.injectPrivate) {
+                            this.emitLine(method);
+                        }
+                    }
+                }
             },
         );
     }

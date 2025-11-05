@@ -593,6 +593,14 @@ export const CPlusPlusLanguage: Language = {
         { wstring: "use-wstring" },
         { "const-style": "east-const" },
         { boost: "false" },
+        [
+            "cpp-base-class-injection.schema",
+            {
+                "type-overrides": "test/inputs/schema/cpp-base-class-injection.json",
+                "just-types": true,
+                boost: "false",
+            },
+        ],
     ],
     sourceFiles: ["src/language/CPlusPlus/index.ts"],
 };

@@ -223,14 +223,31 @@ export class BaseString {
 
 /**
  * Type override rule for substituting JSON schema types with custom C++ types
+ * or enhancing generated types with base classes and methods
  */
 export interface TypeOverrideRule {
     /** Regex pattern to match against type names */
     pattern: string;
-    /** C++ type to substitute */
-    substitution: string;
-    /** Header file to include for this type */
-    header: string;
+
+    /** C++ type to substitute (mutually exclusive with baseClass) */
+    substitution?: string;
+    /** Header file to include for substituted type */
+    header?: string;
+
+    /** Base class to inherit from (mutually exclusive with substitution) */
+    baseClass?: string;
+    /** Header file to include for base class */
+    baseClassHeader?: string;
+
+    /** Public method declarations to inject */
+    injectPublic?: string[];
+    /** Protected method declarations to inject */
+    injectProtected?: string[];
+    /** Private method declarations to inject */
+    injectPrivate?: string[];
+
+    /** Only inject when serialization is enabled (not --just-types) */
+    onlyWithSerialization?: boolean;
 }
 
 /**
@@ -252,8 +269,37 @@ export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
         }
 
         for (const rule of rules) {
-            if (!rule.pattern || !rule.substitution || !rule.header) {
-                throw new Error("Each type override rule must have pattern, substitution, and header fields");
+            // Pattern is required
+            if (!rule.pattern) {
+                throw new Error("Each type override rule must have a pattern field");
+            }
+
+            // Check for mutually exclusive options
+            if (rule.substitution && rule.baseClass) {
+                throw new Error(
+                    `Rule with pattern "${rule.pattern}" cannot have both substitution and baseClass - they are mutually exclusive`
+                );
+            }
+
+            // Must have either substitution or baseClass
+            if (!rule.substitution && !rule.baseClass) {
+                throw new Error(
+                    `Rule with pattern "${rule.pattern}" must have either substitution or baseClass`
+                );
+            }
+
+            // If substitution, header is required
+            if (rule.substitution && !rule.header) {
+                throw new Error(
+                    `Rule with pattern "${rule.pattern}" has substitution but missing header field`
+                );
+            }
+
+            // If baseClass but no methods to inject, warn about it
+            if (rule.baseClass && !rule.injectPublic && !rule.injectProtected && !rule.injectPrivate) {
+                console.warn(
+                    `Rule with pattern "${rule.pattern}" has baseClass but no methods to inject - type will only inherit from base`
+                );
             }
         }
 

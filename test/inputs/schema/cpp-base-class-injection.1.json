@@ -1,0 +1,26 @@
+{
+    "patches": [
+        {
+            "id": "patch1",
+            "timestamp": {
+                "seconds": 1234567890,
+                "nanos": 500000000
+            },
+            "data": "sample data"
+        }
+    ],
+    "cuts": [
+        {
+            "id": "cut1",
+            "startTime": {
+                "seconds": 1234567890,
+                "nanos": 0
+            },
+            "endTime": {
+                "seconds": 1234567900,
+                "nanos": 0
+            }
+        }
+    ]
+}
+

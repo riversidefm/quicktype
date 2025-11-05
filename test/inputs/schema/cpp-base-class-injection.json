@@ -1,0 +1,28 @@
+[
+    {
+        "pattern": "PatchEntry$",
+        "baseClass": "rstl::SerializableObject",
+        "baseClassHeader": "rstl/serializable_object.h",
+        "injectPublic": [
+            "std::string toJsonString() const override;",
+            "void fromJsonString(const std::string& json) override;"
+        ],
+        "onlyWithSerialization": true
+    },
+    {
+        "pattern": "CutEntry$",
+        "baseClass": "rstl::SerializableObject",
+        "baseClassHeader": "rstl/serializable_object.h",
+        "injectPublic": [
+            "std::string toJsonString() const override;",
+            "void fromJsonString(const std::string& json) override;"
+        ],
+        "onlyWithSerialization": true
+    },
+    {
+        "pattern": "Timestamp$",
+        "substitution": "std::chrono::system_clock::time_point",
+        "header": "chrono"
+    }
+]
+
