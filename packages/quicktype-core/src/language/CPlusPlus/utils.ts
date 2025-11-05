@@ -245,6 +245,11 @@ export interface TypeOverrideRule {
     injectProtected?: string[];
     /** Private method declarations to inject */
     injectPrivate?: string[];
+
+    /** Field names to make private */
+    privateFields?: string[];
+    /** Field names to make protected */
+    protectedFields?: string[];
 }
 
 /**
@@ -278,10 +283,10 @@ export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
                 );
             }
 
-            // Must have either substitution or baseClass
-            if (!rule.substitution && !rule.baseClass) {
+            // Must have either substitution, baseClass, or field access modifiers
+            if (!rule.substitution && !rule.baseClass && !rule.privateFields && !rule.protectedFields) {
                 throw new Error(
-                    `Rule with pattern "${rule.pattern}" must have either substitution or baseClass`
+                    `Rule with pattern "${rule.pattern}" must have either substitution, baseClass, or field access modifiers (privateFields/protectedFields)`
                 );
             }
 

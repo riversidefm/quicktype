@@ -353,6 +353,12 @@ export abstract class Renderer {
         this.changeIndent(-1);
     }
 
+    public outdent(fn: () => void): void {
+        this.changeIndent(-1);
+        fn();
+        this.changeIndent(1);
+    }
+
     protected abstract setUpNaming(): Iterable<Namespace>;
     protected abstract emitSource(givenOutputFilename: string): void;
 

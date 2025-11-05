@@ -1088,10 +1088,110 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         this.emitLine(cppType, " ", name, ";");
     }
 
+    /**
+     * Emits a group of properties with optional access modifier (for struct mode only)
+     */
+    protected emitPropertyGroup(
+        c: ClassType,
+        properties: Array<[Sourcelike, string, ClassProperty]>,
+        accessModifier?: string,
+    ): void {
+        if (properties.length === 0) return;
+
+        if (accessModifier) {
+            this.ensureBlankLine();
+            // Emit access modifier at same level as struct/class keyword
+            this.outdent(() => {
+                this.emitLine(`${accessModifier}:`);
+            });
+        }
+
+        for (const [name, jsonName, property] of properties) {
+            this.emitDescription(this.descriptionForClassProperty(c, jsonName));
+            this.emitMember(
+                this.cppType(
+                    property.type,
+                    {
+                        needsForwardIndirection: true,
+                        needsOptionalIndirection: true,
+                        inJsonNamespace: false,
+                    },
+                    true,
+                    false,
+                    property.isOptional,
+                ),
+                name,
+            );
+        }
+    }
+
+    /**
+     * Categorizes class properties by access modifier based on enhancement rule
+     */
+    protected categorizeProperties(
+        c: ClassType,
+        enhancementRule?: TypeOverrideRule,
+    ): {
+        publicProps: Array<[Sourcelike, string, ClassProperty]>;
+        protectedProps: Array<[Sourcelike, string, ClassProperty]>;
+        privateProps: Array<[Sourcelike, string, ClassProperty]>;
+    } {
+        const publicProps: Array<[Sourcelike, string, ClassProperty]> = [];
+        const protectedProps: Array<[Sourcelike, string, ClassProperty]> = [];
+        const privateProps: Array<[Sourcelike, string, ClassProperty]> = [];
+
+        const privateFieldsSet = new Set(enhancementRule?.privateFields ?? []);
+        const protectedFieldsSet = new Set(enhancementRule?.protectedFields ?? []);
+
+        // Validate that field names exist
+        const allFieldNames = new Set<string>();
+        this.forEachClassProperty(c, "none", (name) => {
+            allFieldNames.add(this.sourcelikeToString(name));
+        });
+
+        if (enhancementRule) {
+            const validateFields = (fields: string[] | undefined, fieldType: string) => {
+                if (fields) {
+                    for (const fieldName of fields) {
+                        if (!allFieldNames.has(fieldName)) {
+                            throw new Error(
+                                `Field "${fieldName}" in ${fieldType} does not exist in type. ` +
+                                `Available fields: ${Array.from(allFieldNames).join(", ")}`
+                            );
+                        }
+                    }
+                }
+            };
+
+            validateFields(enhancementRule.privateFields, "privateFields");
+            validateFields(enhancementRule.protectedFields, "protectedFields");
+        }
+
+        // Categorize properties
+        this.forEachClassProperty(c, "none", (name, jsonName, property) => {
+            const nameStr = this.sourcelikeToString(name);
+            const entry: [Sourcelike, string, ClassProperty] = [name, jsonName, property];
+
+            if (privateFieldsSet.has(nameStr)) {
+                privateProps.push(entry);
+            } else if (protectedFieldsSet.has(nameStr)) {
+                protectedProps.push(entry);
+            } else {
+                publicProps.push(entry);
+            }
+        });
+
+        return { publicProps, protectedProps, privateProps };
+    }
+
     protected emitClassMembers(
         c: ClassType,
         constraints: Map<string, Sourcelike> | undefined,
+        enhancementRule?: TypeOverrideRule,
     ): void {
+        // Categorize properties by access modifier
+        const { publicProps, protectedProps, privateProps } = this.categorizeProperties(c, enhancementRule);
+
         if (this._options.codeFormat) {
             this.emitLine("private:");
 
@@ -1123,24 +1223,23 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             this.emitLine("public:");
         }
 
-        this.forEachClassProperty(c, "none", (name, jsonName, property) => {
-            this.emitDescription(this.descriptionForClassProperty(c, jsonName));
-            if (!this._options.codeFormat) {
-                this.emitMember(
-                    this.cppType(
-                        property.type,
-                        {
-                            needsForwardIndirection: true,
-                            needsOptionalIndirection: true,
-                            inJsonNamespace: false,
-                        },
-                        true,
-                        false,
-                        property.isOptional,
-                    ),
-                    name,
-                );
-            } else {
+        //  For struct mode with field access modifiers
+        if (!this._options.codeFormat && (privateProps.length > 0 || protectedProps.length > 0)) {
+            // Emit public fields first (no modifier needed)
+            this.emitPropertyGroup(c, publicProps);
+
+            // Emit protected fields
+            this.emitPropertyGroup(c, protectedProps, "protected");
+
+            // Emit private fields
+            this.emitPropertyGroup(c, privateProps, "private");
+        } else if (!this._options.codeFormat) {
+            // Struct mode without access modifiers - all public
+            this.emitPropertyGroup(c, publicProps);
+        } else {
+            // Class mode with getters/setters - use existing logic
+            this.forEachClassProperty(c, "none", (name, jsonName, property) => {
+                this.emitDescription(this.descriptionForClassProperty(c, jsonName));
                 const [getterName, mutableGetterName, setterName] = defined(
                     this._gettersAndSettersForPropertyName.get(name),
                 );
@@ -1253,8 +1352,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 }
 
                 this.ensureBlankLine();
-            }
-        });
+            });
+        }
     }
 
     protected generateClassConstraints(
@@ -1365,7 +1464,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     this.ensureBlankLine();
                 }
 
-                this.emitClassMembers(c, constraints);
+                this.emitClassMembers(c, constraints, enhancementRule);
 
                 // Inject methods if enhancement rule is present
                 if (enhancementRule) {
@@ -1373,6 +1472,12 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     if (enhancementRule.injectPublic && enhancementRule.injectPublic.length > 0) {
                         this.ensureBlankLine();
                         if (!this._options.codeFormat) {
+                            // In struct mode, add public: if there are private/protected fields
+                            if (enhancementRule.privateFields?.length || enhancementRule.protectedFields?.length) {
+                                this.outdent(() => {
+                                    this.emitLine("public:");
+                                });
+                            }
                             this.emitLine("// Injected public methods");
                         } else {
                             this.emitLine("public:");
@@ -1386,7 +1491,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     // Inject protected methods
                     if (enhancementRule.injectProtected && enhancementRule.injectProtected.length > 0) {
                         this.ensureBlankLine();
-                        this.emitLine("protected:");
+                        this.outdent(() => {
+                            this.emitLine("protected:");
+                        });
                         this.emitLine("// Injected protected methods");
                         for (const method of enhancementRule.injectProtected) {
                             this.emitLine(method);
@@ -1396,7 +1503,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     // Inject private methods
                     if (enhancementRule.injectPrivate && enhancementRule.injectPrivate.length > 0) {
                         this.ensureBlankLine();
-                        this.emitLine("private:");
+                        this.outdent(() => {
+                            this.emitLine("private:");
+                        });
                         this.emitLine("// Injected private methods");
                         for (const method of enhancementRule.injectPrivate) {
                             this.emitLine(method);
