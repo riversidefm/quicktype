@@ -536,7 +536,7 @@ export const CPlusPlusLanguage: Language = {
     base: "test/fixtures/cplusplus",
     setupCommand:
         "curl -o json.hpp https://raw.githubusercontent.com/nlohmann/json/87df1d6708915ffbfa26a051ad7562ecc22e5579/src/json.hpp",
-    compileCommand: "g++ -O0 -o quicktype -std=c++17 -I/opt/homebrew/opt/boost/include main.cpp",
+    compileCommand: "g++ -O0 -o quicktype -std=c++17 main.cpp",
     runCommand(sample: string) {
         return `./quicktype "${sample}"`;
     },
@@ -971,7 +971,7 @@ export const Scala3Language: Language = {
         "name-style.json",
 
         /*
-I havea no idea how to encode these tests correctly. 
+I havea no idea how to encode these tests correctly.
 */
         "kitchen-sink.json",
         "26c9c.json",
@@ -1051,7 +1051,7 @@ export const Smithy4sLanguage: Language = {
         "name-style.json",
 
         /*
-I havea no idea how to encode these tests correctly. 
+I havea no idea how to encode these tests correctly.
 */
         "kitchen-sink.json",
         "26c9c.json",

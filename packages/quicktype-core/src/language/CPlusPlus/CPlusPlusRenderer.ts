@@ -3164,6 +3164,12 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         const propTypes = this.generatedTypes(isClassMember, propertyType);
 
         for (const t of propTypes) {
+            // Skip types that have been substituted - they don't need includes
+            const substitution = this.isSubstitutedType(t.type);
+            if (substitution !== undefined) {
+                continue;
+            }
+
             const typeName = this.sourcelikeToString(t.name);
 
             const propRecord: IncludeRecord = {
