@@ -859,7 +859,15 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         if (substitution !== undefined) {
             // isSubstitutedType only returns rules with substitution and header
             this._customTypeHeaders.add(substitution.header!);
-            return substitution.substitution!;
+            const substitutedType = substitution.substitution!;
+
+            // If the field is optional, wrap the substituted type in std::optional
+            if (isOptional) {
+                this.trackStlHeader("optional");
+                return [this.optionalType(t), "<", substitutedType, ">"];
+            }
+
+            return substitutedType;
         }
 
         if (isOptional && t instanceof UnionType) {
