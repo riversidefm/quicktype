@@ -1,0 +1,8 @@
+[
+  {
+    "pattern": "CustomType$",
+    "substitution": "MyCustomType",
+    "header": "my_custom_type.h"
+  }
+]
+

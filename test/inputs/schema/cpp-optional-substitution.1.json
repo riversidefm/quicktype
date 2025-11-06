@@ -1,0 +1,8 @@
+{
+  "requiredField": "test",
+  "optionalCustom": {
+    "value": 42
+  },
+  "optionalBuiltin": true
+}
+

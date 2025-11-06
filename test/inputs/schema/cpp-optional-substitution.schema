@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "requiredField": {
+      "type": "string"
+    },
+    "optionalCustom": {
+      "$ref": "#/definitions/CustomType",
+      "description": "This field is optional and uses a custom type"
+    },
+    "optionalBuiltin": {
+      "type": "boolean",
+      "description": "This field is optional and uses a builtin type"
+    }
+  },
+  "required": ["requiredField"],
+  "definitions": {
+    "CustomType": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": ["value"]
+    }
+  }
+}
+
