@@ -440,15 +440,18 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 return undefined;
             }
             const rule = this.getTypeSubstitution(this.sourcelikeToString(typeName));
-            // Only return if it's an enhancement rule (has baseClass)
-            if (rule?.baseClass) {
-                // Track the base class header
-                if (rule.baseClassHeader) {
-                    this._baseClassHeaders.add(rule.baseClassHeader);
-                }
-                return rule;
-            }
-            return undefined;
+            // Only return if it's an enhancement rule (has base classes, injected methods, or field access modifiers)
+            const hasEnhancement = rule && (
+                rule.publicBaseClasses ||
+                rule.protectedBaseClasses ||
+                rule.privateBaseClasses ||
+                rule.injectPublic ||
+                rule.injectProtected ||
+                rule.injectPrivate ||
+                rule.privateFields ||
+                rule.protectedFields
+            );
+            return hasEnhancement ? rule : undefined;
         } catch {
             // Some types may not have names yet during generation
             return undefined;
@@ -685,19 +688,19 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
      * Pre-collects all custom type and base class headers for single-source mode
      */
     protected collectAllTypeHeaders(): void {
-        // Collect base class headers for all classes
+        // Collect additional headers for all classes
         this.forEachObject("none", (c: ClassType) => {
             const enhancementRule = this.getEnhancementRule(c);
-            if (enhancementRule?.baseClassHeader) {
-                this._baseClassHeaders.add(enhancementRule.baseClassHeader);
+            if (enhancementRule?.additionalHeaders) {
+                enhancementRule.additionalHeaders.forEach(h => this._baseClassHeaders.add(h));
             }
         });
 
         // Collect substitution headers for all types
         const collectSubstitutionHeaders = (t: Type): void => {
             const substitution = this.isSubstitutedType(t);
-            if (substitution !== undefined) {
-                this._customTypeHeaders.add(substitution.header!);
+            if (substitution?.additionalHeaders) {
+                substitution.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
             }
         };
 
@@ -910,8 +913,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         // Check if this is a substituted type
         const substitution = this.isSubstitutedType(t);
         if (substitution !== undefined) {
-            // isSubstitutedType only returns rules with substitution and header
-            this._customTypeHeaders.add(substitution.header!);
+            // Add headers for substituted type
+            if (substitution.additionalHeaders) {
+                substitution.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+            }
             const substitutedType = substitution.substitution!;
 
             // If the field is optional, wrap the substituted type in std::optional
@@ -1025,7 +1030,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             (enumType) => {
                 const sub = this.isSubstitutedType(enumType);
                 if (sub !== undefined) {
-                    this._customTypeHeaders.add(sub.header!);
+                    if (sub.additionalHeaders) {
+                        sub.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                    }
                     return sub.substitution!;
                 }
                 return [
@@ -1052,7 +1059,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
                 const sub = this.isSubstitutedType(unionType);
                 if (sub !== undefined) {
-                    this._customTypeHeaders.add(sub.header!);
+                    if (sub.additionalHeaders) {
+                        sub.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                    }
                     return sub.substitution!;
                 }
                 return [
@@ -1490,8 +1499,32 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             this._options.codeFormat ? "class " : "struct ",
             className
         ];
-        if (enhancementRule?.baseClass) {
-            classDeclaration.push(" : public ", enhancementRule.baseClass);
+
+        // Build base class inheritance list
+        const baseClassList: Sourcelike[] = [];
+        if (enhancementRule) {
+            if (enhancementRule.publicBaseClasses) {
+                enhancementRule.publicBaseClasses.forEach((base) => {
+                    if (baseClassList.length > 0) baseClassList.push(", ");
+                    baseClassList.push("public ", base);
+                });
+            }
+            if (enhancementRule.protectedBaseClasses) {
+                enhancementRule.protectedBaseClasses.forEach((base) => {
+                    if (baseClassList.length > 0) baseClassList.push(", ");
+                    baseClassList.push("protected ", base);
+                });
+            }
+            if (enhancementRule.privateBaseClasses) {
+                enhancementRule.privateBaseClasses.forEach((base) => {
+                    if (baseClassList.length > 0) baseClassList.push(", ");
+                    baseClassList.push("private ", base);
+                });
+            }
+        }
+
+        if (baseClassList.length > 0) {
+            classDeclaration.push(" : ", baseClassList);
         }
 
         this.emitBlock(
@@ -3338,10 +3371,12 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         const propTypes = this.generatedTypes(isClassMember, propertyType);
 
         for (const t of propTypes) {
-            // For substituted types, add their custom header but don't include the generated file
+            // For substituted types, add their headers but don't include the generated file
             const substitution = this.isSubstitutedType(t.type);
             if (substitution !== undefined) {
-                this._customTypeHeaders.add(substitution.header!);
+                if (substitution.additionalHeaders) {
+                    substitution.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                }
                 continue;
             }
 
@@ -3413,12 +3448,12 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
          */
         const includes: IncludeMap = new Map();
 
-        // For classes, check if they have a base class enhancement rule
-        // and add the base class header if needed
+        // For classes, check if they have enhancement rules
+        // and add any additional headers needed
         if (c instanceof ClassType) {
             const enhancementRule = this.getEnhancementRule(c);
-            if (enhancementRule?.baseClassHeader) {
-                this._baseClassHeaders.add(enhancementRule.baseClassHeader);
+            if (enhancementRule?.additionalHeaders) {
+                enhancementRule.additionalHeaders.forEach(h => this._baseClassHeaders.add(h));
             }
         }
 

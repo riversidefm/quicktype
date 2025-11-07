@@ -229,15 +229,18 @@ export interface TypeOverrideRule {
     /** Regex pattern to match against type names */
     pattern: string;
 
-    /** C++ type to substitute (mutually exclusive with baseClass) */
+    /** C++ type to substitute (mutually exclusive with base class inheritance) */
     substitution?: string;
-    /** Header file to include for substituted type */
-    header?: string;
 
-    /** Base class to inherit from (mutually exclusive with substitution) */
-    baseClass?: string;
-    /** Header file to include for base class */
-    baseClassHeader?: string;
+    /** Base classes to inherit from with public access */
+    publicBaseClasses?: string[];
+    /** Base classes to inherit from with protected access */
+    protectedBaseClasses?: string[];
+    /** Base classes to inherit from with private access */
+    privateBaseClasses?: string[];
+
+    /** Header files to include (for substitutions, base classes, injected methods, etc.) */
+    additionalHeaders?: string[];
 
     /** Public method declarations to inject */
     injectPublic?: string[];
@@ -277,30 +280,31 @@ export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
             }
 
             // Check for mutually exclusive options
-            if (rule.substitution && rule.baseClass) {
+            const hasBaseClass = rule.publicBaseClasses || rule.protectedBaseClasses || rule.privateBaseClasses;
+            if (rule.substitution && hasBaseClass) {
                 throw new Error(
-                    `Rule with pattern "${rule.pattern}" cannot have both substitution and baseClass - they are mutually exclusive`
+                    `Rule with pattern "${rule.pattern}" cannot have both substitution and base class inheritance - they are mutually exclusive`
                 );
             }
 
-            // Must have either substitution, baseClass, or field access modifiers
-            if (!rule.substitution && !rule.baseClass && !rule.privateFields && !rule.protectedFields) {
+            // Must have either substitution, base class, or field access modifiers
+            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields) {
                 throw new Error(
-                    `Rule with pattern "${rule.pattern}" must have either substitution, baseClass, or field access modifiers (privateFields/protectedFields)`
+                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, or field access modifiers (privateFields/protectedFields)`
                 );
             }
 
-            // If substitution, header is required
-            if (rule.substitution && !rule.header) {
-                throw new Error(
-                    `Rule with pattern "${rule.pattern}" has substitution but missing header field`
-                );
-            }
-
-            // If baseClass but no methods to inject, warn about it
-            if (rule.baseClass && !rule.injectPublic && !rule.injectProtected && !rule.injectPrivate) {
+            // If substitution or base classes, additionalHeaders should be provided
+            if ((rule.substitution || hasBaseClass) && (!rule.additionalHeaders || rule.additionalHeaders.length === 0)) {
                 console.warn(
-                    `Rule with pattern "${rule.pattern}" has baseClass but no methods to inject - type will only inherit from base`
+                    `Rule with pattern "${rule.pattern}" has substitution or base classes but no additionalHeaders specified`
+                );
+            }
+
+            // Warn if base class inheritance but no methods to inject
+            if (hasBaseClass && !rule.injectPublic && !rule.injectProtected && !rule.injectPrivate) {
+                console.warn(
+                    `Rule with pattern "${rule.pattern}" has base class inheritance but no methods to inject - type will only inherit from base`
                 );
             }
         }

@@ -1,0 +1,13 @@
+[
+  {
+    "pattern": "CppMultipleInheritance",
+    "publicBaseClasses": ["Serializable", "Validatable"],
+    "protectedBaseClasses": ["Cacheable"],
+    "additionalHeaders": ["rstl/serializable.h", "rstl/validatable.h", "rstl/cacheable.h"],
+    "injectPublic": [
+      "void serialize() override;",
+      "bool validate() const override;"
+    ]
+  }
+]
+

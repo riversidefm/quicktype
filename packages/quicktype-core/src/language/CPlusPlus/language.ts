@@ -112,7 +112,7 @@ export const cPlusPlusOptions = {
     ),
     typeOverridesFile: new StringOption(
         "type-overrides",
-        "JSON file with type rules: * substitution: pattern, substitution, header * enhancement: pattern, baseClass, baseClassHeader, injectPublic/Protected/Private, privateFields, protectedFields",
+        "JSON file with type rules: * substitution: pattern, substitution, additionalHeaders[] * enhancement: pattern, publicBaseClasses[], protectedBaseClasses[], privateBaseClasses[], additionalHeaders[], injectPublic/Protected/Private[], privateFields[], protectedFields[]",
         "FILE",
         "",
         "secondary",
