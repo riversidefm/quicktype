@@ -568,6 +568,13 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             this._currentFilename = this.sourcelikeToString(basename);
         }
 
+        // In multi-source mode, clear custom type and base class headers for each file
+        // so that each file only includes headers for types it actually uses
+        if (!this._options.typeSourceStyle) {
+            this._customTypeHeaders.clear();
+            this._baseClassHeaders.clear();
+        }
+
         if (this.leadingComments !== undefined) {
             this.emitComments(this.leadingComments);
         } else if (!this._options.justTypes) {
@@ -665,6 +672,19 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             }
         }
 
+        // In single-source mode, emit custom type and base class headers here
+        // In multi-source mode, these are emitted per-file after dependencies are collected
+        if (this._options.typeSourceStyle) {
+            this.emitCustomAndBaseClassHeaders();
+        }
+
+        this.ensureBlankLine();
+    }
+
+    /**
+     * Emits custom type substitution headers and base class headers
+     */
+    protected emitCustomAndBaseClassHeaders(): void {
         // Emit custom type headers
         if (this._customTypeHeaders.size > 0) {
             this.ensureBlankLine();
@@ -686,8 +706,6 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 this.emitInclude(isSystemHeader, header);
             }
         }
-
-        this.ensureBlankLine();
     }
 
     protected finishFile(): void {
@@ -3281,9 +3299,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         const propTypes = this.generatedTypes(isClassMember, propertyType);
 
         for (const t of propTypes) {
-            // Skip types that have been substituted - they don't need includes
+            // For substituted types, add their custom header but don't include the generated file
             const substitution = this.isSubstitutedType(t.type);
             if (substitution !== undefined) {
+                this._customTypeHeaders.add(substitution.header!);
                 continue;
             }
 
@@ -3445,6 +3464,11 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         this._generatedFiles.add(name);
 
         this.emitIncludes(d, this.sourcelikeToString(defName));
+
+        // In multi-source mode, emit custom type and base class headers after dependencies are collected
+        if (!this._options.typeSourceStyle) {
+            this.emitCustomAndBaseClassHeaders();
+        }
 
         this.emitNamespaces(this._namespaceNames, () => {
             this.emitDescription(this.descriptionForType(d));
