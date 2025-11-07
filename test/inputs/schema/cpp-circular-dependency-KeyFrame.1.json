@@ -1,0 +1,10 @@
+{
+  "id": "keyframe1",
+  "events": [
+    {
+      "type": "test-event",
+      "value": {}
+    }
+  ]
+}
+

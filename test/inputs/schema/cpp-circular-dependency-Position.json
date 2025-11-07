@@ -1,0 +1,8 @@
+[
+  {
+    "pattern": "^Event$",
+    "substitution": "CustomEvent",
+    "header": "custom/event.h"
+  }
+]
+
