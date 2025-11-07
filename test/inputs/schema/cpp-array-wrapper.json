@@ -1,0 +1,8 @@
+[
+  {
+    "pattern": "HeavyObject$",
+    "arrayWrapper": "std::shared_ptr",
+    "additionalHeaders": ["memory"]
+  }
+]
+

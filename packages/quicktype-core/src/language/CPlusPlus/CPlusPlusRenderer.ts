@@ -428,6 +428,29 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     /**
+     * Check if a named type has an array wrapper
+     */
+    protected getArrayWrapper(t: Type): TypeOverrideRule | undefined {
+        if (!isNamedType(t) || this._typeOverrides.length === 0) {
+            return undefined;
+        }
+        try {
+            const typeName = this.nameForNamedType(t);
+            if (typeName === undefined) {
+                return undefined;
+            }
+            const rule = findTypeOverride(this.sourcelikeToString(typeName), this._typeOverrides);
+            // Only return if it has an array wrapper
+            if (rule?.arrayWrapper) {
+                return rule;
+            }
+            return undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
+    /**
      * Get enhancement rule (base class + method injection) for a type
      */
     protected getEnhancementRule(t: Type): TypeOverrideRule | undefined {
@@ -696,26 +719,34 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             }
         });
 
-        // Collect substitution headers for all types
-        const collectSubstitutionHeaders = (t: Type): void => {
+        // Collect substitution headers and array wrapper headers for all types
+        const collectTypeHeaders = (t: Type): void => {
             const substitution = this.isSubstitutedType(t);
             if (substitution?.additionalHeaders) {
                 substitution.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+            }
+
+            // Check if this is an array type with a wrapper
+            if (t instanceof ArrayType) {
+                const wrapperRule = this.getArrayWrapper(t.items);
+                if (wrapperRule?.additionalHeaders) {
+                    wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                }
             }
         };
 
         this.forEachObject("none", (c: ClassType) => {
             this.forEachClassProperty(c, "none", (_name, _jsonName, property) => {
-                collectSubstitutionHeaders(property.type);
+                collectTypeHeaders(property.type);
             });
         });
 
         this.forEachUnion("none", (u: UnionType) => {
-            collectSubstitutionHeaders(u);
+            collectTypeHeaders(u);
         });
 
         this.forEachEnum("none", (e: EnumType) => {
-            collectSubstitutionHeaders(e);
+            collectTypeHeaders(e);
         });
     }
 
@@ -975,19 +1006,40 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             },
             (arrayType) => {
                 this.trackStlHeader("vector");
+
+                // Check if the element type has an array wrapper
+                const wrapperRule = this.getArrayWrapper(arrayType.items);
+
+                const elementType = this.cppType(
+                    arrayType.items,
+                    {
+                        needsForwardIndirection: false,
+                        needsOptionalIndirection: true,
+                        inJsonNamespace,
+                    },
+                    withIssues,
+                    forceNarrowString,
+                    false,
+                );
+
+                if (wrapperRule?.arrayWrapper) {
+                    // Add headers for the wrapper
+                    if (wrapperRule.additionalHeaders) {
+                        wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                    }
+
+                    return [
+                        "std::vector<",
+                        wrapperRule.arrayWrapper,
+                        "<",
+                        elementType,
+                        ">>",
+                    ];
+                }
+
                 return [
                     "std::vector<",
-                    this.cppType(
-                        arrayType.items,
-                        {
-                            needsForwardIndirection: false,
-                            needsOptionalIndirection: true,
-                            inJsonNamespace,
-                        },
-                        withIssues,
-                        forceNarrowString,
-                        false,
-                    ),
+                    elementType,
                     ">",
                 ];
             },

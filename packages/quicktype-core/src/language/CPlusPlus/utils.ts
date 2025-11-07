@@ -253,6 +253,9 @@ export interface TypeOverrideRule {
     privateFields?: string[];
     /** Field names to make protected */
     protectedFields?: string[];
+
+    /** Wrapper template for array elements of this type (e.g., "std::shared_ptr" to generate std::vector<std::shared_ptr<T>>) */
+    arrayWrapper?: string;
 }
 
 /**
@@ -287,17 +290,17 @@ export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
                 );
             }
 
-            // Must have either substitution, base class, or field access modifiers
-            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields) {
+            // Must have either substitution, base class, field access modifiers, or array wrapper
+            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields && !rule.arrayWrapper) {
                 throw new Error(
-                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, or field access modifiers (privateFields/protectedFields)`
+                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, field access modifiers (privateFields/protectedFields), or arrayWrapper`
                 );
             }
 
-            // If substitution or base classes, additionalHeaders should be provided
-            if ((rule.substitution || hasBaseClass) && (!rule.additionalHeaders || rule.additionalHeaders.length === 0)) {
+            // If substitution, base classes, or array wrapper, additionalHeaders should be provided
+            if ((rule.substitution || hasBaseClass || rule.arrayWrapper) && (!rule.additionalHeaders || rule.additionalHeaders.length === 0)) {
                 console.warn(
-                    `Rule with pattern "${rule.pattern}" has substitution or base classes but no additionalHeaders specified`
+                    `Rule with pattern "${rule.pattern}" has substitution, base classes, or arrayWrapper but no additionalHeaders specified`
                 );
             }
 

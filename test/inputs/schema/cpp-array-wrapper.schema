@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Array Wrapper Test",
+  "type": "object",
+  "properties": {
+    "heavy_objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HeavyObject"
+      }
+    },
+    "primitives": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "light_objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/LightObject"
+      }
+    }
+  },
+  "required": ["heavy_objects", "primitives", "light_objects"],
+  "definitions": {
+    "HeavyObject": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "data"]
+    },
+    "LightObject": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": ["value"]
+    }
+  }
+}

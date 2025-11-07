@@ -1,0 +1,22 @@
+{
+  "heavy_objects": [
+    {
+      "id": 1,
+      "data": "heavy1"
+    },
+    {
+      "id": 2,
+      "data": "heavy2"
+    }
+  ],
+  "primitives": [1, 2, 3, 4, 5],
+  "light_objects": [
+    {
+      "value": "light1"
+    },
+    {
+      "value": "light2"
+    }
+  ]
+}
+
