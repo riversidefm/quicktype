@@ -1,6 +1,6 @@
 {
   "name": "@riversidefm/quicktype",
-  "version": "23.2.0-riverside.10",
+  "version": "23.2.0-riverside.11",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
