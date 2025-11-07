@@ -682,6 +682,41 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     /**
+     * Pre-collects all custom type and base class headers for single-source mode
+     */
+    protected collectAllTypeHeaders(): void {
+        // Collect base class headers for all classes
+        this.forEachObject("none", (c: ClassType) => {
+            const enhancementRule = this.getEnhancementRule(c);
+            if (enhancementRule?.baseClassHeader) {
+                this._baseClassHeaders.add(enhancementRule.baseClassHeader);
+            }
+        });
+
+        // Collect substitution headers for all types
+        const collectSubstitutionHeaders = (t: Type): void => {
+            const substitution = this.isSubstitutedType(t);
+            if (substitution !== undefined) {
+                this._customTypeHeaders.add(substitution.header!);
+            }
+        };
+
+        this.forEachObject("none", (c: ClassType) => {
+            this.forEachClassProperty(c, "none", (_name, _jsonName, property) => {
+                collectSubstitutionHeaders(property.type);
+            });
+        });
+
+        this.forEachUnion("none", (u: UnionType) => {
+            collectSubstitutionHeaders(u);
+        });
+
+        this.forEachEnum("none", (e: EnumType) => {
+            collectSubstitutionHeaders(e);
+        });
+    }
+
+    /**
      * Emits custom type substitution headers and base class headers
      */
     protected emitCustomAndBaseClassHeaders(): void {
@@ -3263,6 +3298,10 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     protected emitSingleSourceStructure(proposedFilename: string): void {
+        // In single-source mode, pre-collect all custom type and base class headers
+        // before starting the file so they can be emitted at the top
+        this.collectAllTypeHeaders();
+
         this.startFile(proposedFilename);
         this._generatedFiles.add(proposedFilename);
 
@@ -3373,6 +3412,15 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
          * are defined by others
          */
         const includes: IncludeMap = new Map();
+
+        // For classes, check if they have a base class enhancement rule
+        // and add the base class header if needed
+        if (c instanceof ClassType) {
+            const enhancementRule = this.getEnhancementRule(c);
+            if (enhancementRule?.baseClassHeader) {
+                this._baseClassHeaders.add(enhancementRule.baseClassHeader);
+            }
+        }
 
         if (c instanceof UnionType) {
             this.updateIncludes(false, includes, c, defName);
