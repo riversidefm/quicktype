@@ -1,6 +1,6 @@
 {
     "name": "@riversidefm/quicktype-graphql-input",
-    "version": "18.0.15-riverside.10",
+    "version": "18.0.15-riverside.11",
     "package": "Package for using GraphQL as an input language to quicktype",
     "license": "Apache-2.0",
     "main": "dist/index.js",
