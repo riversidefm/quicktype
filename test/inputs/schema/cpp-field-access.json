@@ -1,8 +1,8 @@
 [
   {
     "pattern": "CppFieldAccess$",
-    "baseClass": "Validatable",
-    "baseClassHeader": "validatable.h",
+    "publicBaseClasses": ["Validatable"],
+    "additionalHeaders": ["validatable.h"],
     "privateFields": ["items", "count"],
     "injectPublic": [
       "void addItem(const std::string& item);",

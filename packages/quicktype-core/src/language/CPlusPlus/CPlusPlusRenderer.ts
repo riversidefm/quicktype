@@ -451,6 +451,29 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     /**
+     * Check if a named type has a custom array container
+     */
+    protected getArrayContainer(t: Type): TypeOverrideRule | undefined {
+        if (!isNamedType(t) || this._typeOverrides.length === 0) {
+            return undefined;
+        }
+        try {
+            const typeName = this.nameForNamedType(t);
+            if (typeName === undefined) {
+                return undefined;
+            }
+            const rule = findTypeOverride(this.sourcelikeToString(typeName), this._typeOverrides);
+            // Only return if it has an array container
+            if (rule?.arrayContainer) {
+                return rule;
+            }
+            return undefined;
+        } catch {
+            return undefined;
+        }
+    }
+
+    /**
      * Get enhancement rule (base class + method injection) for a type
      */
     protected getEnhancementRule(t: Type): TypeOverrideRule | undefined {
@@ -719,18 +742,23 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             }
         });
 
-        // Collect substitution headers and array wrapper headers for all types
+        // Collect substitution headers, array wrapper headers, and array container headers for all types
         const collectTypeHeaders = (t: Type): void => {
             const substitution = this.isSubstitutedType(t);
             if (substitution?.additionalHeaders) {
                 substitution.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
             }
 
-            // Check if this is an array type with a wrapper
+            // Check if this is an array type with custom handling
             if (t instanceof ArrayType) {
                 const wrapperRule = this.getArrayWrapper(t.items);
                 if (wrapperRule?.additionalHeaders) {
                     wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                }
+                
+                const containerRule = this.getArrayContainer(t.items);
+                if (containerRule?.additionalHeaders) {
+                    containerRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
                 }
             }
         };
@@ -1005,10 +1033,23 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 return this._stringType.getType();
             },
             (arrayType) => {
-                this.trackStlHeader("vector");
-
-                // Check if the element type has an array wrapper
+                // Check if the element type has custom array handling
                 const wrapperRule = this.getArrayWrapper(arrayType.items);
+                const containerRule = this.getArrayContainer(arrayType.items);
+
+                // Determine the container type
+                const containerType = containerRule?.arrayContainer || "std::vector";
+                
+                // Track appropriate header
+                if (containerRule?.arrayContainer) {
+                    // Custom container - headers from additionalHeaders
+                    if (containerRule.additionalHeaders) {
+                        containerRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                    }
+                } else {
+                    // Default vector
+                    this.trackStlHeader("vector");
+                }
 
                 const elementType = this.cppType(
                     arrayType.items,
@@ -1022,6 +1063,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     false,
                 );
 
+                // Handle array wrapper (element wrapper like std::shared_ptr)
                 if (wrapperRule?.arrayWrapper) {
                     // Add headers for the wrapper
                     if (wrapperRule.additionalHeaders) {
@@ -1029,7 +1071,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     }
 
                     return [
-                        "std::vector<",
+                        containerType,
+                        "<",
                         wrapperRule.arrayWrapper,
                         "<",
                         elementType,
@@ -1038,7 +1081,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 }
 
                 return [
-                    "std::vector<",
+                    containerType,
+                    "<",
                     elementType,
                     ">",
                 ];

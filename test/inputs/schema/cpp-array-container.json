@@ -1,0 +1,14 @@
+[
+  {
+    "pattern": "Event$",
+    "arrayContainer": "std::deque",
+    "additionalHeaders": ["deque"]
+  },
+  {
+    "pattern": "LargeObject$",
+    "arrayContainer": "std::list",
+    "arrayWrapper": "std::shared_ptr",
+    "additionalHeaders": ["list", "memory"]
+  }
+]
+

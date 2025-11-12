@@ -1,0 +1,16 @@
+{
+  "events": [
+    { "id": 1, "name": "start" },
+    { "id": 2, "name": "stop" }
+  ],
+  "largeObjects": [
+    { "id": 100, "data": "large1", "payload": "payload1" },
+    { "id": 101, "data": "large2", "payload": "payload2" }
+  ],
+  "smallObjects": [
+    { "value": "small1" },
+    { "value": "small2" }
+  ],
+  "numbers": [10, 20, 30]
+}
+
