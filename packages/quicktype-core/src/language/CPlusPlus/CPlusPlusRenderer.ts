@@ -755,7 +755,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 if (wrapperRule?.additionalHeaders) {
                     wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
                 }
-                
+
                 const containerRule = this.getArrayContainer(t.items);
                 if (containerRule?.additionalHeaders) {
                     containerRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
@@ -1039,7 +1039,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
                 // Determine the container type
                 const containerType = containerRule?.arrayContainer || "std::vector";
-                
+
                 // Track appropriate header
                 if (containerRule?.arrayContainer) {
                     // Custom container - headers from additionalHeaders
