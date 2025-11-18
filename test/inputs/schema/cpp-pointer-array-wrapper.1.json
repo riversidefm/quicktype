@@ -1,0 +1,29 @@
+{
+  "raw_pointers": [
+    {
+      "id": 1,
+      "name": "node1"
+    },
+    {
+      "id": 2,
+      "name": "node2"
+    }
+  ],
+  "const_pointers": [
+    {
+      "value": "const1"
+    },
+    {
+      "value": "const2"
+    }
+  ],
+  "mixed_objects": [
+    {
+      "data": "regular1"
+    },
+    {
+      "data": "regular2"
+    }
+  ]
+}
+

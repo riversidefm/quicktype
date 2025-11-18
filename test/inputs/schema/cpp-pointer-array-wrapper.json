@@ -1,0 +1,10 @@
+[
+  {
+    "pattern": "^Node$",
+    "arrayWrapper": "*"
+  },
+  {
+    "pattern": "^ConstNode$",
+    "arrayWrapper": " const *"
+  }
+]

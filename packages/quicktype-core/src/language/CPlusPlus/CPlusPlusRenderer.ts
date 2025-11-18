@@ -1063,21 +1063,36 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     false,
                 );
 
-                // Handle array wrapper (element wrapper like std::shared_ptr)
+                // Handle array wrapper (element wrapper like std::shared_ptr or *)
                 if (wrapperRule?.arrayWrapper) {
                     // Add headers for the wrapper
                     if (wrapperRule.additionalHeaders) {
                         wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
                     }
 
-                    return [
-                        containerType,
-                        "<",
-                        wrapperRule.arrayWrapper,
-                        "<",
-                        elementType,
-                        ">>",
-                    ];
+                    // Check if it's a pointer suffix (e.g., "*", "* const", "**")
+                    const isPointerWrapper = wrapperRule.arrayWrapper.includes("*");
+
+                    if (isPointerWrapper) {
+                        // Suffix syntax: T* or T* const
+                        return [
+                            containerType,
+                            "<",
+                            elementType,
+                            wrapperRule.arrayWrapper,
+                            ">",
+                        ];
+                    } else {
+                        // Template syntax: Wrapper<T>
+                        return [
+                            containerType,
+                            "<",
+                            wrapperRule.arrayWrapper,
+                            "<",
+                            elementType,
+                            ">>",
+                        ];
+                    }
                 }
 
                 return [
