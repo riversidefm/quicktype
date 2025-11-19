@@ -7,8 +7,7 @@
   {
     "pattern": "LargeObject$",
     "arrayContainer": "std::list",
-    "arrayWrapper": "std::shared_ptr",
+    "arrayType": "std::shared_ptr<LargeObject>",
     "additionalHeaders": ["list", "memory"]
   }
 ]
-

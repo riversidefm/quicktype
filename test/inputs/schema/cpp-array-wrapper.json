@@ -1,8 +1,7 @@
 [
   {
     "pattern": "HeavyObject$",
-    "arrayWrapper": "std::shared_ptr",
+    "arrayType": "std::shared_ptr<HeavyObject>",
     "additionalHeaders": ["memory"]
   }
 ]
-

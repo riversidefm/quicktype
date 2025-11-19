@@ -428,9 +428,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     /**
-     * Check if a named type has an array wrapper
+     * Check if a named type has a custom array type
      */
-    protected getArrayWrapper(t: Type): TypeOverrideRule | undefined {
+    protected getArrayType(t: Type): TypeOverrideRule | undefined {
         if (!isNamedType(t) || this._typeOverrides.length === 0) {
             return undefined;
         }
@@ -440,8 +440,8 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 return undefined;
             }
             const rule = findTypeOverride(this.sourcelikeToString(typeName), this._typeOverrides);
-            // Only return if it has an array wrapper
-            if (rule?.arrayWrapper) {
+            // Only return if it has an array type
+            if (rule?.arrayType) {
                 return rule;
             }
             return undefined;
@@ -751,9 +751,9 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
 
             // Check if this is an array type with custom handling
             if (t instanceof ArrayType) {
-                const wrapperRule = this.getArrayWrapper(t.items);
-                if (wrapperRule?.additionalHeaders) {
-                    wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                const typeRule = this.getArrayType(t.items);
+                if (typeRule?.additionalHeaders) {
+                    typeRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
                 }
 
                 const containerRule = this.getArrayContainer(t.items);
@@ -1034,7 +1034,7 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
             },
             (arrayType) => {
                 // Check if the element type has custom array handling
-                const wrapperRule = this.getArrayWrapper(arrayType.items);
+                const typeRule = this.getArrayType(arrayType.items);
                 const containerRule = this.getArrayContainer(arrayType.items);
 
                 // Determine the container type
@@ -1051,6 +1051,22 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     this.trackStlHeader("vector");
                 }
 
+                // If custom array type specified, use it directly
+                if (typeRule?.arrayType) {
+                    // Add headers for the custom type
+                    if (typeRule.additionalHeaders) {
+                        typeRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
+                    }
+
+                    return [
+                        containerType,
+                        "<",
+                        typeRule.arrayType,
+                        ">",
+                    ];
+                }
+
+                // Otherwise, generate the element type normally
                 const elementType = this.cppType(
                     arrayType.items,
                     {
@@ -1062,38 +1078,6 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                     forceNarrowString,
                     false,
                 );
-
-                // Handle array wrapper (element wrapper like std::shared_ptr or *)
-                if (wrapperRule?.arrayWrapper) {
-                    // Add headers for the wrapper
-                    if (wrapperRule.additionalHeaders) {
-                        wrapperRule.additionalHeaders.forEach(h => this._customTypeHeaders.add(h));
-                    }
-
-                    // Check if it's a pointer suffix (e.g., "*", "* const", "**")
-                    const isPointerWrapper = wrapperRule.arrayWrapper.includes("*");
-
-                    if (isPointerWrapper) {
-                        // Suffix syntax: T* or T* const
-                        return [
-                            containerType,
-                            "<",
-                            elementType,
-                            wrapperRule.arrayWrapper,
-                            ">",
-                        ];
-                    } else {
-                        // Template syntax: Wrapper<T>
-                        return [
-                            containerType,
-                            "<",
-                            wrapperRule.arrayWrapper,
-                            "<",
-                            elementType,
-                            ">>",
-                        ];
-                    }
-                }
 
                 return [
                     containerType,

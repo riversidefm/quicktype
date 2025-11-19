@@ -254,8 +254,8 @@ export interface TypeOverrideRule {
     /** Field names to make protected */
     protectedFields?: string[];
 
-    /** Wrapper template for array elements of this type (e.g., "std::shared_ptr" to generate std::vector<std::shared_ptr<T>>) */
-    arrayWrapper?: string;
+    /** Full type to use for array elements (e.g., "Asset *" to generate std::vector<Asset *>) */
+    arrayType?: string;
     /** Container type for arrays of this type (e.g., "std::list" to generate std::list<T> instead of std::vector<T>) */
     arrayContainer?: string;
 }
@@ -292,17 +292,17 @@ export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
                 );
             }
 
-            // Must have either substitution, base class, field access modifiers, array wrapper, or array container
-            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields && !rule.arrayWrapper && !rule.arrayContainer) {
+            // Must have either substitution, base class, field access modifiers, array type, or array container
+            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields && !rule.arrayType && !rule.arrayContainer) {
                 throw new Error(
-                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, field access modifiers (privateFields/protectedFields), arrayWrapper, or arrayContainer`
+                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, field access modifiers (privateFields/protectedFields), arrayType, or arrayContainer`
                 );
             }
 
-            // If substitution, base classes, array wrapper, or array container, additionalHeaders should be provided
-            if ((rule.substitution || hasBaseClass || rule.arrayWrapper || rule.arrayContainer) && (!rule.additionalHeaders || rule.additionalHeaders.length === 0)) {
+            // If substitution, base classes, array type, or array container, additionalHeaders should be provided
+            if ((rule.substitution || hasBaseClass || rule.arrayType || rule.arrayContainer) && (!rule.additionalHeaders || rule.additionalHeaders.length === 0)) {
                 console.warn(
-                    `Rule with pattern "${rule.pattern}" has substitution, base classes, arrayWrapper, or arrayContainer but no additionalHeaders specified`
+                    `Rule with pattern "${rule.pattern}" has substitution, base classes, arrayType, or arrayContainer but no additionalHeaders specified`
                 );
             }
 

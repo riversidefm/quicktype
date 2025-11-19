@@ -1,10 +1,10 @@
 [
   {
     "pattern": "^Node$",
-    "arrayWrapper": "*"
+    "arrayType": "Node *"
   },
   {
     "pattern": "^ConstNode$",
-    "arrayWrapper": " const *"
+    "arrayType": "ConstNode const *"
   }
 ]
