@@ -277,13 +277,20 @@ export function messageError<Kind extends ErrorKinds>(
 
     for (const [name, value] of Object.entries(properties as StringMap)) {
         let valueString = "";
-        if (
+        if (typeof value === "string") {
+            valueString = value;
+        } else if (
             typeof value === "object" &&
-            typeof value?.toString === "function"
+            value !== null &&
+            typeof (value as Error).message === "string"
         ) {
-            valueString = value.toString();
-        } else if (typeof value?.message === "string") {
-            valueString = value.message;
+            valueString = (value as Error).message;
+        } else if (
+            typeof value === "object" &&
+            value !== null &&
+            typeof (value as { toString?: () => string }).toString === "function"
+        ) {
+            valueString = (value as { toString: () => string }).toString();
         } else if (typeof value !== "string") {
             valueString = JSON.stringify(value);
         }

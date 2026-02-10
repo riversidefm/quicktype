@@ -10,7 +10,7 @@ import { panic } from "../../support/Support";
 
 import { getStream } from "./get-stream";
 
-import { fetch } from "./$fetch";
+import { fetch } from "./$fetch.ci";
 
 interface HttpHeaders {
     [key: string]: string;

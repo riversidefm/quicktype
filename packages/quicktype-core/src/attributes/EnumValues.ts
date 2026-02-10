@@ -1,4 +1,4 @@
-import { mapMap, mapFromObject } from "collection-utils";
+import { mapMap, mapFromObject, mapMergeInto } from "collection-utils";
 
 import type {
     JSONSchemaAttributes,
@@ -19,6 +19,16 @@ import { checkStringMap, isStringMap } from "../support/Support";
 class EnumValuesTypeAttributeKind extends TypeAttributeKind<AccessorNames> {
     public constructor() {
         super("enumValues");
+    }
+
+    public combine(attrs: AccessorNames[]): AccessorNames {
+        if (attrs.length === 0) return new Map();
+        if (attrs.length === 1) return attrs[0];
+        const result = new Map<string, AccessorEntry>();
+        for (const m of attrs) {
+            mapMergeInto(result, m);
+        }
+        return result;
     }
 
     public makeInferred(_: AccessorNames): undefined {

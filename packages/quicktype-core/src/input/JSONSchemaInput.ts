@@ -305,7 +305,9 @@ export class Ref {
     public get definitionName(): string | undefined {
         const pe = arrayGetFromEnd(this.path, 2);
         if (pe === undefined) return undefined;
-        if (keyOrIndex(pe) === "definitions")
+        const key = keyOrIndex(pe);
+        // Support both draft-07 "definitions" and draft 2019-09+ "$defs"
+        if (key === "definitions" || key === "$defs")
             return keyOrIndex(defined(arrayLast(this.path)));
         return undefined;
     }
@@ -1305,10 +1307,15 @@ async function addTypesInSchema(
             );
             const attributes = modifyTypeNames(typeAttributes, (tn) => {
                 if (!defined(tn).areInferred) return tn;
+                const defName = newLoc.canonicalRef.definitionName;
+                const refName = defName ?? newLoc.canonicalRef.name;
+                // Definition names should have priority (areInferred=false, distance 0)
+                // since they're explicit names from the schema
+                const isInferred = defName === undefined;
                 return TypeNames.make(
-                    new Set([newLoc.canonicalRef.name]),
+                    new Set([refName]),
                     new Set(),
-                    true,
+                    isInferred,
                 );
             });
             types.push(await toType(target, newLoc, attributes));
