@@ -32,6 +32,7 @@ import {
     type RendererOptions,
     type SerializedRenderResult,
     type TargetLanguage,
+    QuickTypeError,
     assert,
     assertNever,
     capitalize,
@@ -1254,6 +1255,9 @@ if (require.main === module) {
     main(process.argv.slice(2)).catch((e) => {
         if (e instanceof Error) {
             console.error(`Error: ${e.message}.`);
+            if (e instanceof QuickTypeError && e.messageName === "InternalError" && e.stack) {
+                console.error(e.stack);
+            }
         } else {
             console.error(e);
         }

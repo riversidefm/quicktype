@@ -50,7 +50,12 @@ export async function getStream(inputStream: Readable, opts: Options = {}) {
         };
     });
 
-    return await p.then(clean, clean).then(() => stream.getBufferedValue());
+    return await p
+        .then(clean, (err) => {
+            clean();
+            throw err;
+        })
+        .then(() => stream.getBufferedValue());
 }
 
 // FIXME: should these be async ?
