@@ -18,7 +18,12 @@ export async function getStream(inputStream: Readable, opts: Options = {}) {
 
     const maxBuffer = opts.maxBuffer ?? Number.POSITIVE_INFINITY;
     let stream: BufferedPassThrough;
-    let clean;
+
+    const clean = () => {
+        if (inputStream.unpipe) {
+            inputStream.unpipe(stream);
+        }
+    };
 
     const p = new Promise((resolve, reject) => {
         const error = (err: any) => {
@@ -41,13 +46,6 @@ export async function getStream(inputStream: Readable, opts: Options = {}) {
         });
         stream.once("error", error);
         stream.on("end", resolve);
-
-        clean = () => {
-            // some streams doesn't implement the `stream.Readable` interface correctly
-            if (inputStream.unpipe) {
-                inputStream.unpipe(stream);
-            }
-        };
     });
 
     return await p
