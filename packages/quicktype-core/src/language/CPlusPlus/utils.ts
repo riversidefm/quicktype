@@ -258,6 +258,9 @@ export interface TypeOverrideRule {
     arrayType?: string;
     /** Container type for arrays of this type (e.g., "std::list" to generate std::list<T> instead of std::vector<T>) */
     arrayContainer?: string;
+
+    /** If true, suppress file generation for this type (useful for synthetic types like DurationClass) */
+    skipGeneration?: boolean;
 }
 
 /**
@@ -292,10 +295,10 @@ export function loadTypeOverrides(filePath: string): TypeOverrideRule[] {
                 );
             }
 
-            // Must have either substitution, base class, field access modifiers, array type, or array container
-            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields && !rule.arrayType && !rule.arrayContainer) {
+            // Must have either substitution, base class, field access modifiers, array type, array container, or skipGeneration
+            if (!rule.substitution && !hasBaseClass && !rule.privateFields && !rule.protectedFields && !rule.arrayType && !rule.arrayContainer && !rule.skipGeneration) {
                 throw new Error(
-                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, field access modifiers (privateFields/protectedFields), arrayType, or arrayContainer`
+                    `Rule with pattern "${rule.pattern}" must have either substitution, base class inheritance, field access modifiers (privateFields/protectedFields), arrayType, arrayContainer, or skipGeneration`
                 );
             }
 

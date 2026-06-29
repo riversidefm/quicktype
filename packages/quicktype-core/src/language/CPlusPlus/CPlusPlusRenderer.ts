@@ -428,6 +428,25 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
     }
 
     /**
+     * Check if a type has skipGeneration set in type-overrides.
+     */
+    private _shouldSkipGeneration(t: Type): boolean {
+        if (!isNamedType(t) || this._typeOverrides.length === 0) {
+            return false;
+        }
+        try {
+            const typeName = this.nameForNamedType(t);
+            if (typeName === undefined) {
+                return false;
+            }
+            const rule = findTypeOverride(this.sourcelikeToString(typeName), this._typeOverrides);
+            return rule?.skipGeneration === true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
      * Check if a named type has a custom array type
      */
     protected getArrayType(t: Type): TypeOverrideRule | undefined {
@@ -3475,6 +3494,11 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
                 continue;
             }
 
+            // Skip types marked with skipGeneration (no file to include)
+            if (this._shouldSkipGeneration(t.type)) {
+                continue;
+            }
+
             const typeName = this.sourcelikeToString(t.name);
 
             const propRecord: IncludeRecord = {
@@ -3634,6 +3658,11 @@ export class CPlusPlusRenderer extends ConvenienceRenderer {
         // Skip generating file for substituted types
         const substitution = this.isSubstitutedType(d);
         if (substitution !== undefined) {
+            return;
+        }
+
+        // Skip generating file for types marked with skipGeneration in type-overrides
+        if (this._shouldSkipGeneration(d)) {
             return;
         }
 
